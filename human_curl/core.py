@@ -65,8 +65,24 @@ except IndexError, e:
     CURL_VERSION = ""
     logger.warn("Unknown pycURL / cURL version")
 
+try:
+    PROXYTYPE_HTTP_1_0 = pycurl.PROXYTYPE_HTTP_1_0
+except AttributeError, e:
+    PROXYTYPE_HTTP_1_0 = 1
+try:
+    PROXYTYPE_SOCKS4A = pycurl.PROXYTYPE_SOCKS4A
+except AttributeError, e:
+    PROXYTYPE_SOCKS4A = 6
+try:
+    PROXYTYPE_SOCKS5_HOSTNAME = pycurl.PROXYTYPE_SOCKS5_HOSTNAME
+except AttributeError, e:
+    PROXYTYPE_SOCKS5_HOSTNAME = 7
 
 PROXIES_TYPES_MAP = {
+    'socks5-hostname': PROXYTYPE_SOCKS5_HOSTNAME,
+    'socks4a': PROXYTYPE_SOCKS4A,
+    'https1.0': PROXYTYPE_HTTP_1_0,
+    'http1.0': PROXYTYPE_HTTP_1_0,
     'socks5': pycurl.PROXYTYPE_SOCKS5,
     'socks4': pycurl.PROXYTYPE_SOCKS4,
     'http': pycurl.PROXYTYPE_HTTP,
@@ -491,7 +507,7 @@ class Request(object):
             opener.setopt(pycurl.PROXYPORT, proxy_addr[1])
             opener.setopt(pycurl.PROXYTYPE, get_code_by_name(proxy_type))
 
-            if proxy_type.upper() in ("CONNECT", "SSL", "HTTPS"):
+            if proxy_type.upper() in ("CONNECT", "SSL", "HTTPS", "HTTPS1.0"):
                 # if CONNECT proxy, need use HTTPPROXYTINNEL
                 opener.setopt(pycurl.HTTPPROXYTUNNEL, 1)
             if proxy_auth:
