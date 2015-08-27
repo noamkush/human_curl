@@ -86,7 +86,7 @@ class AsyncClient(object):
         """
 
         # Check callback functions
-        if ('success_callback' not in params and not self.success_callback) or \
+        if ('success_callback' not in params and not self.success_callback) and \
            ('fail_callback' not in params and not self.fail_callback):
             raise InterfaceError("You must specify success_calback or fail_callback")
 
@@ -204,10 +204,7 @@ class AsyncClient(object):
         opener.fail_callback = None
         opener.request = None
 
-        if getattr(opener, "dirty", False) is True:
-            # After appling this method curl raise error
-            # Unable to fetch curl handle from curl object
-            opener.reset()
+        opener.reset()
 
         # Maybe need delete cookies?
         return opener
@@ -254,8 +251,6 @@ class AsyncClient(object):
                 response = self.make_response(opener)
                 opener.success_callback(response=response,
                                         async_client=self, opener=opener)
-                ## FIXME: after pycurl.MultiCurl reset error
-                ## opener.dirty = True
                 self._free_openers.append(opener)
 
             for opener, errno, errmsg in error_list:
@@ -265,8 +260,6 @@ class AsyncClient(object):
                 opener.fail_callback(errno=errno, errmsg=errmsg,
                                      async_client=self, opener=opener,
                                      request=opener.request)
-                ## FIXME: after pycurl.MultiCurl reset error
-                ## opener.dirty = True
                 self._free_openers.append(opener)
 
 
@@ -296,9 +289,6 @@ class AsyncClient(object):
             if opener.fp is not None:
                 opener.fp.close()
                 opener.fp = None
-            opener.close()
-
-        self._openers_pool.close()
 
     def method(self, method, **kwargs):
         """Added request params to data_queue
