@@ -369,6 +369,14 @@ class RequestsTestCase(BaseTestCase):
         json_response = json.loads(r.content)
         self.assertEquals(json_response['gzipped'], True)
 
+    def test_implicit_gzip(self):
+        r = requests.get(build_url("gzip"))
+
+        self.assertEquals(r.headers['Content-Encoding'], 'gzip')
+
+        json_response = json.loads(r.content)
+        self.assertEquals(json_response['gzipped'], True)
+
     def test_response_info(self):
         r = requests.get(build_url("get"))
 

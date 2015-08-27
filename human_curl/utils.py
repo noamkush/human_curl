@@ -114,6 +114,9 @@ class CaseInsensitiveDict(dict):
     def __getitem__(self, key):
         return super(CaseInsensitiveDict, self).__getitem__(key.lower())
 
+    def get(self, key, default=None):
+        return dict.get(self, key.lower(), default)
+
     def has_key(self, key):
         return super(CaseInsensitiveDict, self).has_key(key.lower())
 

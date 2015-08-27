@@ -754,7 +754,8 @@ class Response(object):
         import zlib
         if not self._content:
             if 'gzip' in self.headers.get('Content-Encoding', '') and \
-                   'zlib' not in pycurl.version:
+                   ('zlib' not in pycurl.version or
+                    self._request._use_gzip is None):
                 try:
                     self._content = decode_gzip(self._body_otput.getvalue())
                 except zlib.error:
