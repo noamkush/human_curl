@@ -13,7 +13,7 @@ from __future__ import with_statement
 
 import os
 import time
-import pycurl2 as pycurl
+import pycurl
 import cookielib
 from Cookie import Morsel
 import json
@@ -61,8 +61,8 @@ TEST_METHODS = (
     ('options', requests.options))
 
 # Use https://github.com/Lispython/httphq
-HTTP_TEST_URL = os.environ.get('HTTP_TEST_URL', 'http://h.wrttn.me')
-HTTPS_TEST_URL = os.environ.get('HTTPS_TEST_URL', 'https://h.wrttn.me')
+HTTP_TEST_URL = os.environ.get('HTTP_TEST_URL', 'http://httpbin.org')
+HTTPS_TEST_URL = os.environ.get('HTTPS_TEST_URL', 'https://httpbin.org')
 
 
 print("Use {0} as test server".format(HTTP_TEST_URL))
@@ -133,10 +133,10 @@ class RequestsTestCase(BaseTestCase):
 
     def test_HTTP_POST(self):
         r = requests.post(build_url("post"))
-        self.assertEquals(r.status_code, 201)
+        self.assertEquals(r.status_code, 200)
 
     def test_HTTP_HEAD(self):
-        r = requests.head(build_url("head"))
+        r = requests.head(build_url("get"))
         self.assertEquals(r.status_code, 200)
 
     def test_HTTP_PUT(self):
@@ -151,35 +151,33 @@ class RequestsTestCase(BaseTestCase):
         self.assertEquals(r.status_code, 200)
 
     def test_HTTP_OPTIONS(self):
-        r = requests.options(build_url("options"))
+        r = requests.options(build_url("get"))
         self.assertEquals(r.status_code, 200)
 
     def test_HEADERS(self):
-        import string
-        headers = (("test-header", "test-header-value"),
+        headers = (("Test-Header", "test-header-value"),
                    ("Another-Test-Header", "kjwbrlfjbwekjbf"))
 
         r = requests.get(build_url("headers"), headers=headers)
         self.assertEquals(r.status_code, 200)
 
         r_json = json.loads(r.content)
-        for field, value in headers:
-            self.assertEquals(r_json.get(string.capwords(field, "-")), value)
+        self.assertDictContainsSubset(dict(headers), r_json['headers'])
 
     def test_PARAMS(self):
         params = {'q': 'test param'}
         r = requests.get(build_url("get""?test=true"), params=params)
         self.assertEquals(r.status_code, 200)
         args = json.loads(r.content)['args']
-        self.assertEquals(args['q'][0], params['q'])
-        self.assertEquals(args["test"][0], "true")
+        self.assertEquals(args['q'], params['q'])
+        self.assertEquals(args["test"], "true")
 
     def test_POST_DATA(self):
         random_key = "key_" + uuid.uuid4().get_hex()[:10]
         random_value = "value_" + uuid.uuid4().get_hex()
         r = requests.post(build_url('post'),
                           data={random_key: random_value})
-        self.assertEquals(r.status_code, 201)
+        self.assertEquals(r.status_code, 200)
 
     def test_PUT_DATA(self):
         random_key = "key_" + uuid.uuid4().get_hex()[:10]
@@ -194,7 +192,7 @@ class RequestsTestCase(BaseTestCase):
         data = "%s:%s" % (random_key, random_value)
         r = requests.post(build_url('post'),
                           data=data)
-        self.assertEquals(r.status_code, 201)
+        self.assertEquals(r.status_code, 200)
         self.assertTrue(data in r.content)
 
     def test_PUT_RAW_DATA(self):
@@ -212,7 +210,7 @@ class RequestsTestCase(BaseTestCase):
         r = requests.post(build_url('post'),
                           files=files)
         json_response = json.loads(r.content)
-        self.assertEquals(r.status_code, 201)
+        self.assertEquals(r.status_code, 200)
         for k, v in files.items():
             self.assertTrue(k in json_response['files'].keys())
 
@@ -228,7 +226,7 @@ class RequestsTestCase(BaseTestCase):
                                 random_key2: random_value2},
                           files=files)
 
-        self.assertEquals(r.status_code, 201)
+        self.assertEquals(r.status_code, 200)
 
     def test_PUT_DATA_and_FILES(self):
         files = {'test_file': open('tests.py'),
@@ -255,21 +253,21 @@ class RequestsTestCase(BaseTestCase):
         cookies_jar = cookielib.CookieJar()
 
         r1 = requests.get(build_url("cookies", "set", random_key, random_value),
-                     cookies=cookies_jar, debug=stdout_debug)
+                     cookies=cookies_jar)
 
         self.assertEquals(r1.cookies[random_key], random_value)
         rtmp = requests.get(build_url("cookies", "set", random_key2, random_value2),
-                            cookies=cookies_jar, debug=stdout_debug)
+                            cookies=cookies_jar)
 
         for cookie in cookies_jar:
             if cookie.name == random_key:
                 self.assertEquals(cookie.value, random_value)
 
-        r3 = requests.get(build_url('cookies'), cookies=cookies_jar, debug=stdout_debug)
+        r3 = requests.get(build_url('cookies'), cookies=cookies_jar)
         json_response = json.loads(r3.content)
 
         for k, v in cookies:
-            self.assertEquals(json_response[k], v)
+            self.assertEquals(json_response['cookies'][k], v)
 
     def test_send_cookies(self):
         random_key = "key_" + uuid.uuid4().get_hex()[:10]
@@ -281,36 +279,33 @@ class RequestsTestCase(BaseTestCase):
                    (random_key2, random_value2))
 
         r = requests.get(build_url('cookies'), cookies=cookies)
-        #                          debug=stdout_debug)
         json_response = json.loads(r.content)
-        self.assertEquals(json_response[random_key], random_value)
+        self.assertEquals(json_response['cookies'][random_key], random_value)
 
 
     def test_basic_auth(self):
-        username =  uuid.uuid4().get_hex()
-        password =  uuid.uuid4().get_hex()
+        username = uuid.uuid4().get_hex()
+        password = uuid.uuid4().get_hex()
         auth_manager = BasicAuth(username, password)
 
         r = requests.get(build_url('basic-auth', username, password),
                          auth=auth_manager)
         self.assertEquals(r.status_code, 200)
         json_response = json.loads(r.content)
-        self.assertEquals(json_response['password'], password)
-        self.assertEquals(json_response['username'], username)
-        self.assertEquals(json_response['auth-type'], 'basic')
+        self.assertEquals(json_response['authenticated'], True)
+        self.assertEquals(json_response['user'], username)
 
     def test_digest_auth(self):
         username = uuid.uuid4().get_hex()
-        password =  uuid.uuid4().get_hex()
+        password = uuid.uuid4().get_hex()
         auth_manager = DigestAuth(username, password)
 
-        r = requests.get(build_url('digest-auth/auth/', username, password),
+        r = requests.get(build_url('digest-auth/auth', username, password),
                          auth=auth_manager, allow_redirects=True)
         self.assertEquals(r.status_code, 200)
         json_response = json.loads(r.content)
-        self.assertEquals(json_response['password'], password)
-        self.assertEquals(json_response['username'], username)
-        self.assertEquals(json_response['auth-type'], 'digest')
+        self.assertEquals(json_response['authenticated'], True)
+        self.assertEquals(json_response['user'], username)
 
     def test_auth_denied(self):
         username = "hacker_username"
@@ -342,8 +337,7 @@ class RequestsTestCase(BaseTestCase):
                          data={random_key: (random_value1, random_value2)})
 
         json_response = json.loads(r.content)
-        self.assertTrue(random_value1 in json_response['args'][random_key])
-        self.assertTrue(random_value2 in json_response['args'][random_key])
+        self.assertListEqual([random_value1, random_value2], json_response['form'][random_key])
 
     def test_multipart_post_data(self):
         random_key = "key_" + uuid.uuid4().get_hex()[:10]
@@ -355,14 +349,14 @@ class RequestsTestCase(BaseTestCase):
 
         json_response = json.loads(r.content)
         content_type = json_response['headers']['Content-Type']
-        self.assertTrue(random_value in json_response['args'][random_key])
+        self.assertEquals(random_value, json_response['form'][random_key])
         self.assertTrue('multipart/form-data; boundary=-' in content_type)
 
     def test_redirect(self):
         r = requests.get(build_url("redirect", '3'), allow_redirects=True)
         self.assertEquals(r.status_code, 200)
         self.assertEquals(len(r.history), 3)
-        self.assertEquals(r.url, build_url("redirect/end"))
+        self.assertEquals(r.url, build_url("get"))
         self.assertEquals(r._request_url, build_url("redirect/3"))
         self.assertRaises(CurlError, requests.get, build_url("redirect", '7'),
                           allow_redirects=True)
@@ -424,8 +418,8 @@ class RequestsTestCase(BaseTestCase):
         self.assertEquals(response.status_code, 200)
         self.assertEqual("{0}/get?email=user%40domain.com&q=value+with+space+and+%40".format(HTTP_TEST_URL), response.request._url)
         args = json.loads(response.content)['args']
-        self.assertEquals(args['q'][0], params['q'])
-        self.assertEquals(args[key][0], value)
+        self.assertEquals(args['q'], params['q'])
+        self.assertEquals(args[key], value)
 
     def test_get_no_encode_query(self):
         params = {'q': 'value with space and @'}
@@ -437,7 +431,7 @@ class RequestsTestCase(BaseTestCase):
         except CurlError, e:
             self.assertEqual(e.code, 52)
         else:
-            self.assertEquals(response.status_code, 502)
+            self.assertEquals(response.status_code, 400)
             self.assertEqual("{0}/get?email=user@domain.com&q=value with space and @".format(HTTP_TEST_URL), response.request._url)
 
     def test_request_key_with_empty_value(self):
@@ -854,9 +848,7 @@ class AuthManagersTestCase(BaseTestCase):
 
         protected_resource = build_url("oauth/1.0/protected_resource/%s/%s" % (consumer_secret, token_secret))
 
-        r = Request("GET", protected_resource,
-                    debug=stdout_debug
-                    )
+        r = Request("GET", protected_resource)
 
         consumer = OAuthConsumer(consumer_key, consumer_secret)
 
@@ -870,8 +862,6 @@ class AuthManagersTestCase(BaseTestCase):
         self.assertTrue(isinstance(oauth_manager._signature_method, SignatureMethod))
         oauth_manager.setup_request(r)
 
-        #self.assertEquals(oauth_manager._debug, stdout_debug)
-
         oauth_manager.request_token()
 
         self.assertEquals(oauth_manager.state, 3)
@@ -881,8 +871,8 @@ class AuthManagersTestCase(BaseTestCase):
         self.assertEquals(oauth_manager.confirm_url, "%s?oauth_token=%s" % \
                           (oauth_manager._authorize_url, oauth_manager._tmp_token_key))
 
-        pin = json.loads(requests.get(oauth_manager.confirm_url,
-                                           debug=stdout_debug).content)['verifier']
+        pin = json.loads(requests.get(oauth_manager.confirm_url
+                                      ).content)['verifier']
         oauth_manager.verify(pin)
 
 
@@ -934,8 +924,7 @@ class AuthManagersTestCase(BaseTestCase):
         protected_resource = build_url("oauth/1.0/protected_resource/%s/%s" % (consumer_secret, token_secret))
 
         r = Request("GET", protected_resource,
-                    debug=stdout_debug,
-                    headers = (("Test-header", "test-value"), )
+                    headers=(("Test-header", "test-value"),)
                     )
 
         consumer = OAuthConsumer(consumer_key, consumer_secret)
@@ -949,9 +938,6 @@ class AuthManagersTestCase(BaseTestCase):
         self.assertEquals(oauth_manager.state, 1)
         self.assertTrue(isinstance(oauth_manager._signature_method, SignatureMethod))
         oauth_manager.setup_request(r)
-
-#        self.assertEquals(oauth_manager._debug, stdout_debug)
-
         oauth_manager.request_token()
 
         self.assertEquals(oauth_manager.state, 3)
@@ -961,8 +947,8 @@ class AuthManagersTestCase(BaseTestCase):
         self.assertEquals(oauth_manager.confirm_url, "%s?oauth_token=%s" % \
                           (oauth_manager._authorize_url, oauth_manager._tmp_token_key))
 
-        pin = json.loads(requests.get(oauth_manager.confirm_url,
-                                           debug=stdout_debug).content)['verifier']
+        pin = json.loads(requests.get(oauth_manager.confirm_url
+                                      ).content)['verifier']
         oauth_manager.verify(pin)
 
 
@@ -1020,14 +1006,12 @@ class AuthManagersTestCase(BaseTestCase):
                                      signature_method=SignatureMethod_HMAC_SHA1)
 
         r = requests.get(protected_resource,
-                         debug=stdout_debug,
                          auth=oauth_manager
                          )
 
         self.assertEquals(oauth_manager.state, 7)
         self.assertTrue(isinstance(oauth_manager._signature_method, SignatureMethod_HMAC_SHA1))
 
-#        self.assertEquals(oauth_manager._debug, stdout_debug)
         self.assertEquals(r.status_code, 200)
         self.assertEquals(json.loads(r.content)['success'], True)
 
@@ -1087,8 +1071,6 @@ class AsyncTestCase(BaseTestCase):
         # Test process_func
         def process_func(num_processed, remaining, num_urls,
                          success_len, error_len):
-            print("\nProcess {0} {1} {2} {3} {4}".format(num_processed, remaining, num_urls,
-                                                         success_len, error_len))
             self.assertEquals(num_urls, 2)
 
         def fail_callback(request, errno, errmsg, async_client, opener):
@@ -1096,7 +1078,7 @@ class AsyncTestCase(BaseTestCase):
             self.assertTrue(isinstance(async_client, AsyncClient))
             self.assertEquals(async_client, async_client_global)
             self.assertEquals(errno, 6)
-            self.assertEquals(errmsg, "Couldn't resolve host '{0}'".format(request.url[7:]))
+            self.assertEquals(errmsg, "Could not resolve host: {0}".format(request.url[7:]))
         async_client_global.get("http://fwbefrubfbrfybghbfb4gbyvrv.com", params=params,
                                 fail_callback=fail_callback)
         self.assertEquals(len(async_client_global._data_queue), 2)
@@ -1167,7 +1149,7 @@ class AsyncTestCase(BaseTestCase):
                 self.assertTrue(isinstance(async_client, AsyncClient))
                 self.assertEquals(async_client, async_client_global)
                 self.assertEquals(errno, 6)
-                self.assertEquals(errmsg, "Couldn't resolve host '{0}'".format(request.url[7:]))
+                self.assertEquals(errmsg, "Could not resolve host: {0}".format(request.url[7:]))
             async_client_global.get("http://fwbefrubfbrfybghbfb4gbyvrv.com", params=params,
                                     fail_callback=fail_callback)
             self.assertEquals(len(async_client_global._data_queue), 2)
