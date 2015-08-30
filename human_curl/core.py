@@ -36,7 +36,7 @@ from .utils import (decode_gzip, CaseInsensitiveDict, to_cookiejar,
                     to_unicode, logger_debug, urlnoencode)
 
 
-from StringIO import StringIO
+from cStringIO import StringIO
 
 try:
     import platform
@@ -285,7 +285,7 @@ class Request(object):
 
         self._encode_query = encode_query
 
-    def __repr__(self, ):
+    def __repr__(self):
         # TODO: collect `Request` settings into representation string
         return "<%s: %s [ %s ]>" % (self.__class__.__name__, self._method, self._url)
 
