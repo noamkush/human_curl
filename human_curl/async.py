@@ -46,7 +46,7 @@ class AsyncClient(object):
         """Create `AsyncClient`
 
         :param size: openers count
-        :param success_callback: default success cullback function
+        :param success_callback: default success callback function
         :param fail_callback: default fail callback function
         :param sleep_timeout: sleep in perform
         :param \*\*kwargs: global request parameters
@@ -88,7 +88,7 @@ class AsyncClient(object):
         # Check callback functions
         if ('success_callback' not in params and not self.success_callback) and \
            ('fail_callback' not in params and not self.fail_callback):
-            raise InterfaceError("You must specify success_calback or fail_callback")
+            raise InterfaceError("You must specify success_callback or fail_callback")
 
         self._data_queue.append(params)
         self._remaining += 1
@@ -121,14 +121,13 @@ class AsyncClient(object):
 
     @staticmethod
     def get_opener():
-        """Make `pycurl.Curl` objcet
+        """Make `pycurl.Curl` object
 
         :return opener: :class:`pycurl.Curl` object
         """
         opener = pycurl.Curl()
         opener.fp = None
         opener.setopt(pycurl.NOSIGNAL, 1)
-        opener.dirty = False
         return opener
 
     def perform_pool(self):
@@ -210,7 +209,7 @@ class AsyncClient(object):
         return opener
 
     def make_response(self, opener):
-        """Make response from successed request
+        """Make response from successful request
 
         :param opener: :class:`pycurl.Curl` object
         :return response: :class:`Response` object
@@ -323,7 +322,7 @@ class AsyncClient(object):
         return self.method("delete", url=url, **kwargs)
 
     def __del__(self):
-        """ Close deascriptors after object delete
+        """ Close descriptors after object delete
         """
         self.cleanup_pool()
 
