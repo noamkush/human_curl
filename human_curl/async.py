@@ -160,8 +160,8 @@ class AsyncClient(object):
             self.perform_pool()
             self.process_pending_requests()
 
-            logger.info("Processed {0} from {1} items".format(
-                self.num_processed, self._num_urls))
+            logger.debug("Processed %s of %s items",
+                self.num_processed, self._num_urls)
 
             # Sleep timeout
             self._openers_pool.select(self._sleep_timeout)
